@@ -1,10 +1,10 @@
 import random
-import sys
+from typing import List, Tuple, Dict
 
 import pygame
-from pygame.examples.setmodescale import screen
 
-colors = {
+# Colors for different tiles
+colors: Dict[int, Tuple[int, int, int]] = {
     0: (130, 130, 130),
     2: (255, 255, 255),
     4: (255, 255, 128),
@@ -18,162 +18,194 @@ colors = {
 
 
 class Game2048:
+    """
+    Class for managing the 2048 game logic.
+
+    Attributes:
+        _size (int): The size of the board (e.g., 4 for a 4x4 board).
+        _board (List[List[int]]): The game board represented as a 2D list.
+    """
     __slots__ = ('_size', '_board')
 
-    def __init__(self, size):
-        self._size = size
+    def __init__(self, board_size: int) -> None:
+        """
+        Initializes the game board.
+
+        Args:
+            board_size (int): The size of the game board.
+        """
+        if board_size < 2:
+            raise ValueError("Size must be at least 2.")
+        self._size = board_size
         self._board = [[0] * self._size for _ in range(self._size)]
+        self._initialize_board()
+
+    def _initialize_board(self) -> None:
+        """Starts the game by placing two random tiles on the board."""
+        for _ in range(2):
+            empty_cells = self.get_empty_cells()
+            if empty_cells:
+                self.insert_2_or_4(random.choice(empty_cells))
 
     @property
-    def size(self):
+    def size(self) -> int:
+        """Returns the size of the game board."""
         return self._size
 
-    @size.setter
-    def size(self, new_size):
-        if isinstance(new_size, int) and new_size != self._size:
-            self._size = new_size
-            self._board = [[0] * self._size for _ in range(self._size)]
-        raise TypeError('You can use only integers')
-
     @property
-    def mas(self):
+    def board(self) -> List[List[int]]:
+        """Returns a copy of the game board."""
         return [row[:] for row in self._board]
 
-    def get_empty_board(self):
-        empty_board = []
-        for i in range(self._size):
-            for j in range(self._size):
-                if self._board[i][j] == 0:
-                    empty_board.append([i, j])
-        return empty_board
+    def get_empty_cells(self) -> List[Tuple[int, int]]:
+        """Returns a list of coordinates of empty cells."""
+        return [(i, j) for i in range(self._size) for j in range(self._size) if self._board[i][j] == 0]
 
-    def draw_board(self):
-        """ Function to draw the board with the current state of the game """
-        for row in range(size):
-            for col in range(size):
-                value = self._board[row][col]  # Get value from the game board
-                w = col * size_block + (col + 1) * margin
-                h = row * size_block + (row + 1) * margin + 110
-                # Draw the rectangle for each tile
-                pygame.draw.rect(screen, colors[value], (w, h, size_block, size_block))
-                # Render the number if the tile is not empty
-                if value != 0:
-                    text = font.render(str(value), True, black)  # Render text with the number
-                    text_rect = text.get_rect(center=(w + size_block // 2, h + size_block // 2))
-                    screen.blit(text, text_rect)  # Blit the text on the screen
+    def insert_2_or_4(self, position: Tuple[int, int]) -> None:
+        """
+        Inserts a 2 or 4 in the specified position.
 
-    def insert_2_or_4(self, indexes):
-        x, y = indexes
-        if random.random() <= 0.75:
-            self._board[x][y] = 2
-        else:
-            self._board[x][y] = 4
+        Args:
+            position (Tuple[int, int]): The (row, column) position for insertion.
+        """
+        x, y = position
+        self._board[x][y] = 2 if random.random() < 0.9 else 4
 
-    def move_left(self):
+    def move_left(self) -> bool:
+        """Handles the logic for moving tiles left. Returns True if the board changed."""
+        changed = False
         for row in self._board:
-            while 0 in row:
-                row.remove(0)
-            while len(row) != self._size:
-                row.append(0)
-        for i in range(self._size):
-            for j in range(self._size - 1):
-                if self._board[i][j] != 0 and self._board[i][j] == self._board[i][j + 1]:
-                    self._board[i][j] *= 2
-                    self._board[i][j + 1] = 0
+            compacted, merged = self._merge(row)
+            if row != compacted:
+                changed = True
+            row[:] = compacted
+        return changed
 
-    def move_right(self):
+    def move_right(self) -> bool:
+        """Handles the logic for moving tiles right. Returns True if the board changed."""
+        changed = False
         for row in self._board:
-            while 0 in row:
-                row.remove(0)
-            while len(row) != self._size:
-                row.insert(0, 0)
-        for i in range(self._size):
-            for j in range(self._size - 1, 0, -1):
-                if self._board[i][j] != 0 and self._board[i][j] == self._board[i][j - 1]:
-                    self._board[i][j] *= 2
-                    self._board[i][j - 1] = 0
+            reversed_row = row[::-1]
+            compacted, merged = self._merge(reversed_row)
+            if row != compacted[::-1]:
+                changed = True
+            row[:] = compacted[::-1]
+        return changed
 
-    def move_up(self):
+    def move_up(self) -> bool:
+        """Handles the logic for moving tiles up. Returns True if the board changed."""
+        changed = False
         for col in range(self._size):
             column = [self._board[row][col] for row in range(self._size)]
-            while 0 in column:
-                column.remove(0)
-            while len(column) != self._size:
-                column.append(0)
+            compacted, merged = self._merge(column)
+            if column != compacted:
+                changed = True
             for row in range(self._size):
-                self._board[row][col] = column[row]
-        for i in range(self._size - 1):
-            for j in range(self._size):
-                if self._board[i][j] != 0 and self._board[i][j] == self._board[i + 1][j]:
-                    self._board[i][j] *= 2
-                    self._board[i + 1][j] = 0
+                self._board[row][col] = compacted[row]
+        return changed
 
-    def move_down(self):
+    def move_down(self) -> bool:
+        """Handles the logic for moving tiles down. Returns True if the board changed."""
+        changed = False
         for col in range(self._size):
-            column = [self._board[row][col] for row in range(self._size)]
-            while 0 in column:
-                column.remove(0)
-            while len(column) != self._size:
-                column.insert(0, 0)
+            column = [self._board[row][col] for row in range(self._size)][::-1]
+            compacted, merged = self._merge(column)
+            if column[::-1] != compacted[::-1]:
+                changed = True
             for row in range(self._size):
-                self._board[row][col] = column[row]
-        for i in range(self._size - 1):
-            for j in range(self._size):
-                if self._board[i][j] != 0 and self._board[i][j] == self._board[i + 1][j]:
-                    self._board[i + 1][j] *= 2
-                    self._board[i][j] = 0
+                self._board[row][col] = compacted[::-1][row]
+                print(self._board[row][col])
+        return changed
+
+    def _merge(self, row: List[int]) -> Tuple[List[int], bool]:
+        """
+        Merges tiles in a row or column for one direction.
+
+        Args:
+            row (List[int]): The row or column to merge.
+
+        Returns:
+            Tuple[List[int], bool]: The merged row and a flag indicating if merging occurred.
+        """
+        merged = []
+        skip = False
+        for i in range(len(row)):
+            if skip:
+                skip = False
+                continue
+            if i + 1 < len(row) and row[i] == row[i + 1] and row[i] != 0:
+                merged.append(row[i] * 2)
+                skip = True
+            elif row[i] != 0:
+                merged.append(row[i])
+        merged += [0] * (self._size - len(merged))
+        return merged, len(merged) != len(row)
 
 
-size = 4
-game = Game2048(size)
-game.move_up()
-
-white = (245, 245, 245)
-gray = (128, 128, 128)
+# Game Settings
 black = (0, 0, 0)
-
-blocks = 4
 size_block = 110
 margin = 10
-width = blocks * size_block + (blocks + 1) * margin
-title_rect = pygame.Rect(0, 0, width, 110)
+size = 4
+width = size * size_block + (size + 1) * margin
 height = width + 110
 
-# Initialize pygame
+# Initialize Pygame
 pygame.init()
 screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption('2048')
+pygame.display.set_caption("2048")
+font = pygame.font.Font(None, 55)
 
-# Set font for rendering numbers
-pygame.font.init()
-font = pygame.font.Font(None, 55)  # You can replace 'None' with a font file if needed
+# Game Initialization
+game = Game2048(size)
 
-while game.get_empty_board():
+
+def draw_board(game2048: Game2048) -> None:
+    """Draws the game board on the screen."""
+    screen.fill(black)
+    font_score = pygame.font.SysFont('Arial', 48)
+    text_score = font_score.render(f'Score: ', True, colors[256])
+    screen.blit(text_score, (20, 35))
+    for row in range(size):
+        for col in range(size):
+            value = game2048.board[row][col]
+            w = col * size_block + (col + 1) * margin
+            h = row * size_block + (row + 1) * margin + 110
+            pygame.draw.rect(screen, colors[value], (w, h, size_block, size_block))
+            if value != 0:
+                text = font.render(str(value), True, black)
+                text_rect = text.get_rect(center=(w + size_block // 2, h + size_block // 2))
+                screen.blit(text, text_rect)
+    pygame.display.update()
+
+
+# Game Loop
+running = True
+while running:
+    draw_board(game)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit(0)
+            running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                game.move_left()
-            if event.key == pygame.K_RIGHT:
-                game.move_right()
-            if event.key == pygame.K_UP:
-                game.move_up()
-            if event.key == pygame.K_DOWN:
-                game.move_down()
-            pygame.draw.rect(screen, white, title_rect)
-            # Handle game logic, e.g., move the tiles based on the key press
-            empty = game.get_empty_board()
-            random.shuffle(empty)
-            random_num = empty.pop()
-            game.insert_2_or_4(random_num)
+                if game.move_left():
+                    empty = game.get_empty_cells()
+                    if empty:
+                        game.insert_2_or_4(random.choice(empty))
+            elif event.key == pygame.K_RIGHT:
+                if game.move_right():
+                    empty = game.get_empty_cells()
+                    if empty:
+                        game.insert_2_or_4(random.choice(empty))
+            elif event.key == pygame.K_UP:
+                if game.move_up():
+                    empty = game.get_empty_cells()
+                    if empty:
+                        game.insert_2_or_4(random.choice(empty))
+            elif event.key == pygame.K_DOWN:
+                if game.move_down():
+                    empty = game.get_empty_cells()
+                    if empty:
+                        game.insert_2_or_4(random.choice(empty))
 
-            # Clear the screen
-            screen.fill(white)
-
-            # Draw the updated board
-            game.draw_board()
-
-    # Update the display
-    pygame.display.update()
+pygame.quit()

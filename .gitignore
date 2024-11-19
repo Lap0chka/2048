@@ -1,4 +1,4 @@
-venv_shop_example/
+venv/
 # Django #
 *.log
 *.pot
