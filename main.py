@@ -26,11 +26,10 @@ def main() -> None:
         rows = db.get_all_rows()
         for index, row in enumerate(rows, 1):
             name, score = row
-            print(f'{index}. {name} has score {score}')
+            print(f"{index}. {name} has score {score}")
     finally:
         db.close()
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

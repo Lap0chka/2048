@@ -1,9 +1,10 @@
 import logging
 import os
+from typing import List, Optional, Tuple
+
 import psycopg2
-from psycopg2.extras import DictCursor
 from dotenv import load_dotenv
-from typing import List, Tuple, Optional
+from psycopg2.extras import DictCursor
 
 # Load environment variables from .env file
 load_dotenv()
@@ -25,7 +26,7 @@ class DatabaseManager:
                 password=os.getenv("DB_PASSWORD"),
                 host=os.getenv("DB_HOST"),
                 port=os.getenv("DB_PORT"),
-                cursor_factory=DictCursor
+                cursor_factory=DictCursor,
             )
             self.connection.autocommit = False
             self.cursor = self.connection.cursor()
@@ -40,13 +41,15 @@ class DatabaseManager:
         """
         try:
             with self.connection.cursor() as cursor:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS users (
                         id SERIAL PRIMARY KEY,
                         name VARCHAR(100) UNIQUE NOT NULL,
                         scores INTEGER NOT NULL
                     )
-                """)
+                """
+                )
                 self.connection.commit()
                 logger.info("Table 'users' created successfully (if it did not exist).")
         except Exception as e:
@@ -67,19 +70,27 @@ class DatabaseManager:
                 row = cursor.fetchone()
 
                 if row:
-                    old_score = row['scores']
+                    old_score = row["scores"]
                     if score > old_score:
-                        cursor.execute("""
+                        cursor.execute(
+                            """
                             UPDATE users SET scores = %s WHERE name = %s
-                        """, (score, name))
+                        """,
+                            (score, name),
+                        )
                         self.connection.commit()
                         logger.info(f"Updated score for user '{name}' to {score}.")
                     else:
-                        logger.info(f"User '{name}' already has a higher or equal score ({old_score}).")
+                        logger.info(
+                            f"User '{name}' already has a higher or equal score ({old_score})."
+                        )
                 else:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO users (name, scores) VALUES (%s, %s)
-                    """, (name, score))
+                    """,
+                        (name, score),
+                    )
                     self.connection.commit()
                     logger.info(f"User '{name}' with score {score} added to the database.")
         except Exception as e:
@@ -95,13 +106,16 @@ class DatabaseManager:
         """
         try:
             with self.connection.cursor() as cursor:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT name, scores FROM users WHERE name = %s
-                """, (name,))
+                """,
+                    (name,),
+                )
                 row = cursor.fetchone()
                 if row:
                     logger.info(f"Record found: {row}")
-                    return row['name'], row['scores']
+                    return row["name"], row["scores"]
                 logger.info(f"User '{name}' not found.")
                 return None
         except Exception as e:
@@ -117,11 +131,13 @@ class DatabaseManager:
         """
         try:
             with self.connection.cursor() as cursor:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT name, scores FROM users ORDER BY scores DESC
-                """)
+                """
+                )
                 rows = cursor.fetchall()
-                return [(row['name'], row['scores']) for row in rows]
+                return [(row["name"], row["scores"]) for row in rows]
         except Exception as e:
             logger.error(f"Error retrieving all records: {e}")
             return []

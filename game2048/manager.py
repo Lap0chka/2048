@@ -1,5 +1,5 @@
 import random
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 import pygame
 
@@ -47,7 +47,8 @@ class GameManager:
         pygame.display.set_caption("game2048")
         self.font = pygame.font.Font(None, self.size_block // 2)
 
-    def get_color(self, value: int) -> Tuple[int, int, int]:
+    @staticmethod
+    def get_color(value: int) -> Tuple[int, int, int]:
         """
         Get the color for a given value.
 
@@ -64,8 +65,8 @@ class GameManager:
         Draw the game board on the screen.
         """
         self.screen.fill(black)
-        font_score = pygame.font.SysFont('Arial', self.size_block // 3)
-        text_score = font_score.render(f'Score: {self.game.score}', True, colors[256])
+        font_score = pygame.font.SysFont("Arial", self.size_block // 3)
+        text_score = font_score.render(f"Score: {self.game.score}", True, colors[256])
         self.screen.blit(text_score, (20, 35))
 
         for row in range(self.game.size):
@@ -73,10 +74,14 @@ class GameManager:
                 value = self.game.board[row][col]
                 w = col * self.size_block + (col + 1) * self.margin
                 h = row * self.size_block + (row + 1) * self.margin + 110
-                pygame.draw.rect(self.screen, self.get_color(value), (w, h, self.size_block, self.size_block))
+                pygame.draw.rect(
+                    self.screen, self.get_color(value), (w, h, self.size_block, self.size_block)
+                )
                 if value != 0:
                     text = self.font.render(str(value), True, black)
-                    text_rect = text.get_rect(center=(w + self.size_block // 2, h + self.size_block // 2))
+                    text_rect = text.get_rect(
+                        center=(w + self.size_block // 2, h + self.size_block // 2)
+                    )
                     self.screen.blit(text, text_rect)
         pygame.display.update()
 
@@ -84,7 +89,7 @@ class GameManager:
         """
         Display the 'Game Over' message.
         """
-        font_game_over = pygame.font.SysFont('Arial', self.size_block // 2)
+        font_game_over = pygame.font.SysFont("Arial", self.size_block // 2)
         text_game_over = font_game_over.render("Game Over!", True, (255, 0, 0))
         text_rect = text_game_over.get_rect(center=(self.width // 2, self.height // 2))
         self.screen.blit(text_game_over, text_rect)

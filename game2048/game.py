@@ -1,5 +1,10 @@
 import random
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
+
+from logger.logger import Logger
+
+# Instantiate the logger
+game_logger = Logger(name="Game2048", log_file="game2048.log").get_logger()
 
 
 class Game2048:
@@ -12,7 +17,7 @@ class Game2048:
         _score (int): The current score of the game.
     """
 
-    __slots__ = ('_size', '_board', '_score')
+    __slots__ = ("_size", "_board", "_score")
     _instance: Optional["Game2048"] = None
 
     def __new__(cls, *args, **kwargs) -> "Game2048":
@@ -40,6 +45,7 @@ class Game2048:
         self._board = [[0] * self._size for _ in range(self._size)]
         self._score = 0
         self._initialize_board()
+        game_logger.info(f"Game initialized with board size {self._size}x{self._size}.")
 
     @property
     def score(self) -> int:
@@ -56,31 +62,6 @@ class Game2048:
         """Returns a copy of the game board."""
         return [row[:] for row in self._board]
 
-    def _merge(self, row: List[int]) -> Tuple[List[int], bool]:
-        """
-        Merges tiles in a row or column for one direction.
-
-        Args:
-            row (List[int]): The row or column to merge.
-
-        Returns:
-            Tuple[List[int], bool]: The merged row and a flag indicating if merging occurred.
-        """
-        merged = []
-        skip = False
-        for i in range(len(row)):
-            if skip:
-                skip = False
-                continue
-            if i + 1 < len(row) and row[i] == row[i + 1] and row[i] != 0:
-                merged.append(row[i] * 2)
-                self._score += row[i] * 2  # Update the score
-                skip = True
-            elif row[i] != 0:
-                merged.append(row[i])
-        merged += [0] * (self._size - len(merged))
-        return merged, len(merged) != len(row)
-
     def _initialize_board(self) -> None:
         """Starts the game by placing two random tiles on the board."""
         for _ in range(2):
@@ -90,7 +71,9 @@ class Game2048:
 
     def get_empty_cells(self) -> List[Tuple[int, int]]:
         """Returns a list of coordinates of empty cells."""
-        return [(i, j) for i in range(self._size) for j in range(self._size) if self._board[i][j] == 0]
+        return [
+            (i, j) for i in range(self._size) for j in range(self._size) if self._board[i][j] == 0
+        ]
 
     def insert_2_or_4(self, position: Tuple[int, int]) -> None:
         """
@@ -101,6 +84,37 @@ class Game2048:
         """
         x, y = position
         self._board[x][y] = 2 if random.random() < 0.9 else 4
+
+    def _merge(self, row: List[int]) -> Tuple[List[int], bool]:
+        """
+        Merges tiles in a row or column for one direction.
+
+        Args:
+            row (List[int]): The row or column to merge.
+
+        Returns:
+            Tuple[List[int], bool]: The merged row and a flag indicating if merging occurred.
+        """
+        # Compact the row to remove zeros
+        non_zero = [num for num in row if num != 0]
+        merged = []
+        skip = False
+        for i in range(len(non_zero)):
+            if skip:
+                skip = False
+                continue
+            if i + 1 < len(non_zero) and non_zero[i] == non_zero[i + 1]:
+                # Merge tiles
+                merged.append(non_zero[i] * 2)
+                self._score += non_zero[i] * 2  # Update the score
+                skip = True  # Skip the next tile as it has been merged
+            else:
+                merged.append(non_zero[i])
+        # Fill with zeros to maintain row size
+        merged += [0] * (self._size - len(merged))
+
+        # Return whether the row has changed
+        return merged, merged != row
 
     def move(self, direction: str) -> bool:
         """
@@ -173,5 +187,5 @@ class Game2048:
             for row in range(self._size - 1):
                 if self._board[row][col] == self._board[row + 1][col]:
                     return False
-
+        game_logger.warning("Game over detected.")
         return True
