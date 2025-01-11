@@ -247,4 +247,4 @@ media/
 *.pyc
 *.db
 *.pid
-migrations/
+migrations/.env
